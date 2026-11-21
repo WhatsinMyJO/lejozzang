@@ -20,7 +20,7 @@
     -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   }
-  body { position: fixed; inset: 0; }
+  body { position: fixed; inset: 0; outline: none; }
   :root { --bar: 84px; --b: min(54px, calc((100vw - 24px - 6 * 8px) / 7)); }
   #stage {
     position: absolute;
@@ -57,7 +57,7 @@
   @media (hover: hover) and (pointer: fine) { #hint { display: block; } }
 </style>
 </head>
-<body>
+<body tabindex="-1">
 <div id="stage"><canvas id="cv"></canvas></div>
 <div id="hint">키보드 — J 점프 · W 손 흔들기 · F 날개 · E 윙크 · S 빙글 · H 하트 · G 선물 · N 눈 받아먹기 · C 에취</div>
 <div id="bar" class="off">
@@ -2211,8 +2211,24 @@ cv.addEventListener('pointercancel', e => endPtr(e, true));
 for (const b of document.querySelectorAll('.btn')) {
   b.addEventListener('pointerdown', e => { e.preventDefault(); if (!noteInput()) trigger(b.dataset.m); b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 120); });
 }
-const KEYS = { j: 'jump', w: 'wave', f: 'flap', e: 'wink', s: 'spin', h: 'hearts', g: 'gift', n: 'catch', c: 'sneeze' };
-window.addEventListener('keydown', e => { const m = KEYS[e.key.toLowerCase()]; if (m && !e.repeat && !noteInput()) trigger(m); });
+// 키보드: 글자(e.key) 대신 자판 위치(e.code)로 — 한글 입력 상태(j → ㅓ)에서도 그대로 돼요
+const KEYS = { KeyJ: 'jump', KeyW: 'wave', KeyF: 'flap', KeyE: 'wink', KeyS: 'spin', KeyH: 'hearts', KeyG: 'gift', KeyN: 'catch', KeyC: 'sneeze' };
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;            // Cmd+W 같은 브라우저 단축키는 건드리지 않기
+  const m = KEYS[e.code];
+  if (!m) return;
+  e.preventDefault();
+  if (!e.repeat && !noteInput()) trigger(m);
+}, true);
+// 처음 열자마자(클릭 없이도) 키보드가 먹히게: 페이지에 초점 주기
+function grabFocus() {
+  if (document.activeElement && document.activeElement !== document.body && document.activeElement !== document.documentElement) return;
+  try { window.focus(); document.body.focus({ preventScroll: true }); } catch (er) {}
+}
+grabFocus();
+window.addEventListener('load', grabFocus);
+window.addEventListener('pageshow', grabFocus);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) grabFocus(); });
 // 확대·스크롤·당겨서 새로고침 막기
 for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault());
 document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
